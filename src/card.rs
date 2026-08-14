@@ -16,11 +16,11 @@ pub enum GamePhase {
                  // maybe hooks go here?
 }
 
+// this is for instantiating decks that hold special cards
+// for example, a card whose purpose is to draw from a special deck
+// of powerful cards, that shouldn't appear in the "Base" deck.
 pub enum DeckCategory {
-    Base,
-    // this is for instantiating decks that hold special cards
-    // for example, a card whose purpose is to draw from a special deck
-    // of powerful cards, that shouldn't appear in the "Base" deck.
+    Base { cards: Vec<String> }, // I'm thinking I just hold ID, and then have an indexed lookup
 }
 
 pub struct CombatStats {
