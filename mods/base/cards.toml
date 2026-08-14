@@ -1,0 +1,28 @@
+[fog_bolt]
+target = "enemy"
+persistent = true
+mana_cost = 4
+elements = { "wind", "water" }
+effects = {
+    call = "deal_damage", params = { amount = 2 },
+    call = "add_curse_on_damage", params = { curse = "fog" }
+}
+
+[sell]
+target = "enemy"
+extra_targets = [{ type = "hand_card", from = "self" }]
+effects = { Sell }
+
+[heal_or_damage]
+target = "self"
+effects = { call = "heal_or_damage", params = {
+    heal_chance = 0.5,
+    heal_amount = 10,
+    damage_amount = 10,
+    }
+}
+
+[sun_amulet]
+playable = false
+persistent = true
+hooks = { on_death = { call = "set_hp", params = { amount = 10 } } }

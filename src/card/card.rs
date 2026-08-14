@@ -1,10 +1,11 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub enum TargetKind {
     SelfTarget,
     Enemy { index: usize },
     AllEnemies,
     HandCard { index: usize },
+    AllPlayers,
 }
 
 pub enum Element {
@@ -12,11 +13,21 @@ pub enum Element {
     Water,
     Earth,
     Wind,
+    Metal,
+    Wood,
 }
 
-pub struct TargetData {
-    starting_target: TargetKind,
-    count: u8,
+pub enum GamePhase {
+    AttackPhase, // usable as part of an attack (weapons, potions, etc.)
+    DefensePhase, //usable when defending an attack (defense, reflect, counterattack, etc.)
+                 // maybe hooks go here?
+}
+
+pub enum DeckCategory {
+    Base,
+    // this is for instantiating decks that hold special cards
+    // for example, a card whose purpose is to draw from a special deck
+    // of powerful cards, that shouldn't appear in the "Base" deck.
 }
 
 pub struct CombatStats {
@@ -25,12 +36,45 @@ pub struct CombatStats {
     element: Option<Element>,
 }
 
-pub struct CardDef {
-    id: String,
-    target_data: TargetData,
+pub enum CardEffect {
+    Afflict {
+        affliction: Element,
+    },
+    AddAfflictionOnDamage {
+        affliction: Element,
+    },
+    RestoreHealth {
+        amount: u8,
+    },
+    DealDamage {
+        amount: u8,
+    },
+    HealOrDamage {
+        heal_chance: f32,
+        heal_amount: u8,
+        damage_amount: u8,
+    },
+    TransferMoney {
+        amount: u8,
+    },
+    Sell,
+}
+
+pub struct CardDefinition {
+    id: &'static str,
+    target_data: Option<TargetKind>,
     combat: Option<CombatStats>,
     combo: bool,
-    on_play: Option<LuaFunction>,
-    hooks: HashMap<String, LuaFunction>,
-    // ...
+    effects: HashSet<CardEffect>,
+    playable: bool,
+    persistent: bool,
+    price: u8,
+    mana_cost: u8,
+    // hooks?
+    elements: HashSet<Element>,
+    copies_in_decks: HashMap<DeckCategory, u8>, // default: {base: 1}
 }
+// todo: new() with some defaults
+// or rather, the toml is the only thing that's going to instantiate
+// TODO: function to get name and description from localization
+// TODO: function to get art from assets
