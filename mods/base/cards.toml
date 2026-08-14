@@ -1,35 +1,84 @@
-[fog_bolt]
-target = "enemy"
-persistent = true
-mana_cost = 4
-elements = [ "wind", "water" ]
-effect = "deal_damage_and_afflict_if_unblocked", params = {
-    damage_amount = 2,
-    affliction = "water",
-}
-
-[heal_or_damage]
-target = "self"
-effect = "heal_or_damage", params = {
-    heal_chance = 0.5,
-    heal_amount = 10,
-    damage_amount = 10,
-}
-
-[sun_amulet]
-playable = false
-persistent = true
-hooks = [
-    on_death = [
-        "set_hp", params = { amount = 10 }
-    ]
-]
+# Base mod: the vanilla card set, declared the same way any third-party
+# mod would declare cards (structure.md). MVP set only -- no status
+# effects (Afflict), no multi-deck-category pools.
 
 [iron_sword]
 target = "enemy"
 price = 5
-effect = "damage", params = { amount = 5 }
+count = 2
+
+[iron_sword.combat]
+atk = 5
+
+[steel_sword]
+target = "enemy"
+price = 8
+count = 1
+
+[steel_sword.combat]
+atk = 8
 
 [iron_shield]
 price = 5
-effect = "defense", params = { amount = 5 }
+count = 2
+
+[iron_shield.combat]
+def = 5
+
+[steel_shield]
+price = 8
+count = 1
+
+[steel_shield.combat]
+def = 8
+
+[sharpening_stone]
+combo = true
+count = 2
+
+[sharpening_stone.combat]
+atk = 2
+
+[fire_bolt]
+target = "enemy"
+mana_cost = 4
+count = 2
+elements = ["fire"]
+
+[fire_bolt.combat]
+atk = 4
+
+[healing_potion]
+target = "self_target"
+count = 3
+
+[healing_potion.effect]
+type = "restore_health"
+amount = 10
+
+[mana_potion]
+target = "self_target"
+count = 2
+
+[mana_potion.effect]
+type = "restore_mana"
+amount = 8
+
+[gamblers_coin]
+target = "self_target"
+count = 2
+
+[gamblers_coin.effect]
+type = "heal_or_damage"
+heal_chance = 0.5
+heal_amount = 10
+damage_amount = 10
+
+[sun_amulet]
+playable = false
+persistent = true
+count = 1
+
+[[sun_amulet.hooks.on_death]]
+type = "restore_health"
+amount = 10

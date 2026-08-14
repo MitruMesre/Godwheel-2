@@ -1,56 +1,30 @@
-// todo: this is intended to be a lookup table for effects
+use rand::Rng;
+
 use crate::card::CardEffect;
 use crate::player::Player;
-use crate::wheel::Element;
 
-fn trigger_effect(effect: CardEffect, caster_id: u8, target_id: u8) -> () {
-    let caster: &mut Player = todo!();
-    let target: &mut Player = todo!();
+/// Applies a single one-off CardEffect to `target` (RNG for the
+/// probabilistic ones comes from `rng`). This only handles the
+/// non-combat effect track -- atk/def combat resolution lives in
+/// game.rs, since it needs both players plus the attacker/defender
+/// exchange, not just one target.
+pub fn trigger_effect(effect: &CardEffect, target: &mut Player, rng: &mut impl Rng) {
     match effect {
-        CardEffect::Afflict { affliction } => todo!(),
-        CardEffect::DealDamageAndAfflictIfUnblocked {
-            affliction,
-            damage_amount,
-        } => todo!(),
-        CardEffect::RestoreHealth { amount } => {
-            assert!(
-                amount <= i8::MAX as u8,
-                "health delta exceeds i8 range in play_card::trigger_effect::RestoreHealth"
-            );
-            target.change_hp(amount as i8)
-        }
-        CardEffect::DealDamage { amount } => {
-            assert!(
-                amount <= i8::MAX as u8,
-                "health delta exceeds i8 range in play_card::trigger_effect::DealDamage"
-            );
-            target.change_hp(-(amount as i8))
-        }
+        CardEffect::RestoreHealth { amount } => target.change_hp(*amount as i32),
+        CardEffect::RestoreMana { amount } => target.change_mana(*amount as i32),
+        CardEffect::RestoreMoney { amount } => target.change_money(*amount as i32),
+        CardEffect::DealDamage { amount } => target.change_hp(-(*amount as i32)),
         CardEffect::HealOrDamage {
             heal_chance,
             heal_amount,
             damage_amount,
         } => {
-            let heal = true; // todo: rng
+            let heal = rng.gen::<f32>() < *heal_chance;
             if heal {
-                trigger_effect(
-                    CardEffect::RestoreHealth {
-                        amount: heal_amount,
-                    },
-                    caster_id,
-                    target_id,
-                );
+                target.change_hp(*heal_amount as i32);
             } else {
-                trigger_effect(
-                    CardEffect::DealDamage {
-                        amount: damage_amount,
-                    },
-                    caster_id,
-                    target_id,
-                );
+                target.change_hp(-(*damage_amount as i32));
             }
         }
-        CardEffect::RestoreMana { amount } => todo!(),
-        CardEffect::RestoreMoney { amount } => todo!(),
     }
 }

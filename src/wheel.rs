@@ -1,4 +1,13 @@
-#[derive(Clone, Copy)]
+use serde::Deserialize;
+
+/// Elements are purely cosmetic for the MVP: they decide what color an
+/// attack's number is drawn in, and nothing else. No blocking, no
+/// resistances, no combining logic. (The full Elemental Wheel from the
+/// GDD is deferred until the MVP loop is solid -- this enum stays as the
+/// closed, exhaustive primitive set so mods can tag cards with it now
+/// without the display logic needing to change later.)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Element {
     // Mortal
     Fire,
@@ -19,60 +28,28 @@ pub enum Element {
     Death,
 }
 
-const MORTAL_ELEMENTS: [Element; 6] = [
-    Element::Fire,
-    Element::Water,
-    Element::Earth,
-    Element::Wind,
-    Element::Metal,
-    Element::Wood,
-];
-
-const DIVINE_ELEMENTS: [Element; 6] = [
-    Element::Light,
-    Element::Dark,
-    Element::Time,
-    Element::Space,
-    Element::Order,
-    Element::Chaos,
-];
-
-/// When constructing an attack,
-/// combine the elements to determine the final Aspect.
-pub fn combine_elements_for_attack(elements: Vec<Option<Element>>) -> Option<Element> {
-    elements
-        .into_iter()
-        .fold(None, combine_two_elements_for_attack)
-}
-fn combine_two_elements_for_attack(
-    element1: Option<Element>,
-    element2: Option<Element>,
-) -> Option<Element> {
-    fn combine(element1: Element, element2: Element) -> Option<Element> {
-        todo!("element logic undecided");
-    }
-
-    match (element1, element2) {
-        (None, None) => None,
-        (Some(e1), None) => Some(e1),
-        (None, Some(e2)) => Some(e2),
-        (Some(e1), Some(e2)) => combine(e1, e2),
-    }
+/// What color should an attack's number be drawn in, given the union of
+/// elements contributed by the base card and any combo cards attached to
+/// it?
+///
+/// - No elements at all, or two-or-more *different* elements -> neutral
+///   (black).
+/// - Exactly one distinct element across every contributing card -> that
+///   element's color.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DisplayColor {
+    Neutral,
+    Element(Element),
 }
 
-/// When defending an attack, get the list of aspects that can block it.
-pub fn filter_elements_for_defense(incoming_element: Option<Element>) -> Vec<Element> {
-    if incoming_element.is_none() {
-        // no element - can be blocked by anything
-        // todo: maybe include life and death?
-        return MORTAL_ELEMENTS
-            .iter()
-            .chain(DIVINE_ELEMENTS.iter())
-            .copied()
-            .collect();
+pub fn attack_display_color<'a>(elements: impl IntoIterator<Item = &'a Element>) -> DisplayColor {
+    let mut iter = elements.into_iter();
+    let Some(&first) = iter.next() else {
+        return DisplayColor::Neutral;
+    };
+    if iter.all(|&e| e == first) {
+        DisplayColor::Element(first)
+    } else {
+        DisplayColor::Neutral
     }
-    let incoming_element = incoming_element.unwrap();
-    // all mortal elements can be blocked by divine elements
-
-    todo!("element logic undecided");
 }

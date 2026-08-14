@@ -3,8 +3,19 @@ name = "godwheel_2"
 version = "0.1.0"
 edition = "2024"
 
+# cdylib: needed for the wasm/browser build (Phase 2, not built yet).
+# rlib: lets `src/bin/cli.rs` link against this crate as a normal library,
+# so the MVP can be played locally with `cargo run --bin cli` without
+# touching wasm-pack at all.
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 wasm-bindgen = "0.2"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+rand = "0.8"
+
+[[bin]]
+name = "cli"
+path = "src/bin/cli.rs"

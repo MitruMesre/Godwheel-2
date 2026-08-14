@@ -1,4 +1,6 @@
-mod card;
-mod play_card;
-mod player;
-mod wheel;
+pub mod card;
+pub mod game;
+pub mod play_card;
+pub mod player;
+pub mod registry;
+pub mod wheel;

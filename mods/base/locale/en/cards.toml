@@ -1,17 +1,39 @@
-[fog_bolt]
-Fog Bolt
-Fog on damage
-
-[heal_or_damage]
-Thump-thump Tear
-or 10 damage
-
-[sun_amulet]
-Sun Amulet
-HP+10 when the HP becomes 0
-
 [iron_sword]
-Iron Sword
+name = "Iron Sword"
+description = "ATK 5"
+
+[steel_sword]
+name = "Steel Sword"
+description = "ATK 8"
 
 [iron_shield]
-Iron Shield
+name = "Iron Shield"
+description = "DEF 5"
+
+[steel_shield]
+name = "Steel Shield"
+description = "DEF 8"
+
+[sharpening_stone]
+name = "Sharpening Stone"
+description = "Combo: +ATK 2"
+
+[fire_bolt]
+name = "Fire Bolt"
+description = "ATK 4, Fire"
+
+[healing_potion]
+name = "Healing Potion"
+description = "HP +10"
+
+[mana_potion]
+name = "Mana Potion"
+description = "MP +8"
+
+[gamblers_coin]
+name = "Gambler's Coin"
+description = "50% HP +10, 50% HP -10"
+
+[sun_amulet]
+name = "Sun Amulet"
+description = "HP +10 when your HP would hit 0"
