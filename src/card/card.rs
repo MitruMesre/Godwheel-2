@@ -1,20 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::wheel::Element;
+
 pub enum TargetKind {
     SelfTarget,
     Enemy { index: usize },
     AllEnemies,
     HandCard { index: usize },
     AllPlayers,
-}
-
-pub enum Element {
-    Fire,
-    Water,
-    Earth,
-    Wind,
-    Metal,
-    Wood,
 }
 
 pub enum GamePhase {

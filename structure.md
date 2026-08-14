@@ -11,8 +11,8 @@ Here's the architecture discussion summarized:
 
 **Card data shape:** nested structs for genuinely reused groupings — `target_data` (starting target, count, filter) and `combat`/`stats` (atk, def, element) — each validated independently on load; behavior (`on_play`, `hooks`) stays flat, not nested, since it's code, not data.
 
-**Lua VM:** leaning toward `piccolo` (pure-Rust, sandboxed, wasm-friendly) over `mlua`'s vendored C Lua.
+<!-- **Lua VM:** leaning toward `piccolo` (pure-Rust, sandboxed, wasm-friendly) over `mlua`'s vendored C Lua.
 
-**Mod packaging:** a mod splits into `logic.lua` (host-only, drives simulation) plus `assets/` and `locale/` (needed by every peer, for rendering only) — since only the host actually simulates, only the host needs the logic; everyone else just needs to display results.
+**Mod packaging:** a mod splits into `logic.lua` --> (host-only, drives simulation) plus `assets/` and `locale/` (needed by every peer, for rendering only) — since only the host actually simulates, only the host needs the logic; everyone else just needs to display results.
 
 **Networking:** host-authoritative, not deterministic lockstep — rejected lockstep specifically because your game has hidden per-player state (hands), and lockstep requires every peer to simulate the full true state locally, leaking hands to anyone willing to read client memory; it also has no safe resync path for a no-autosave competitive match the way Factorio's world-state lockstep does. Host-authoritative avoids both problems and keeps the door open to swapping the trusted "host" for a real dedicated server later (for ranked PvP) without rearchitecting — same code, different deployment. Transport: likely WebRTC via something like Trystero for free serverless signaling, to avoid hosting/paying for a server.
