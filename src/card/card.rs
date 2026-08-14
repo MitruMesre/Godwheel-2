@@ -40,8 +40,9 @@ pub enum CardEffect {
     Afflict {
         affliction: Element,
     },
-    AddAfflictionOnDamage {
+    DealDamageAndAfflictIfUnblocked {
         affliction: Element,
+        damage_amount: u8,
     },
     RestoreHealth {
         amount: u8,
@@ -61,11 +62,11 @@ pub enum CardEffect {
 }
 
 pub struct CardDefinition {
-    id: &'static str,
+    id: String,
     target_data: Option<TargetKind>,
     combat: Option<CombatStats>,
     combo: bool,
-    effects: HashSet<CardEffect>,
+    effect: Option<CardEffect>,
     playable: bool,
     persistent: bool,
     price: u8,
