@@ -8,11 +8,6 @@ effect = "deal_damage_and_afflict_if_unblocked", params = {
     affliction = "water",
 }
 
-[sell]
-target = "enemy"
-extra_targets = [{ type = "hand_card", from = "self" }]
-effect = Sell
-
 [heal_or_damage]
 target = "self"
 effect = "heal_or_damage", params = {
@@ -29,3 +24,12 @@ hooks = [
         "set_hp", params = { amount = 10 }
     ]
 ]
+
+[iron_sword]
+target = "enemy"
+price = 5
+effect = "damage", params = { amount = 5 }
+
+[iron_shield]
+price = 5
+effect = "defense", params = { amount = 5 }

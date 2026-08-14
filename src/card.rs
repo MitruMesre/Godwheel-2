@@ -40,6 +40,12 @@ pub enum CardEffect {
     RestoreHealth {
         amount: u8,
     },
+    RestoreMana {
+        amount: u8,
+    },
+    RestoreMoney {
+        amount: u8,
+    },
     DealDamage {
         amount: u8,
     },
@@ -48,10 +54,6 @@ pub enum CardEffect {
         heal_amount: u8,
         damage_amount: u8,
     },
-    TransferMoney {
-        amount: u8,
-    },
-    Sell,
 }
 
 pub struct CardDefinition {
@@ -67,6 +69,33 @@ pub struct CardDefinition {
     // hooks?
     elements: HashSet<Element>,
     copies_in_decks: HashMap<DeckCategory, u8>, // default: {base: 1}
+}
+impl CardDefinition {
+    pub fn short_description(&self) -> String {
+        // todo: localization
+        match &self.effect {
+            Some(effect) => match effect {
+                CardEffect::DealDamage { amount } => {
+                    if self.combo {
+                        format!("+ATK{}", amount)
+                    } else {
+                        format!("ATK{}", amount)
+                    }
+                }
+                CardEffect::RestoreHealth { amount } => {
+                    format!("HP+{}", amount)
+                }
+                CardEffect::RestoreMana { amount } => {
+                    format!("MP+{}", amount)
+                }
+                CardEffect::RestoreMoney { amount } => {
+                    format!("$+{}", amount)
+                }
+                _ => String::new(),
+            },
+            None => String::new(),
+        }
+    }
 }
 // todo: new() with some defaults
 // or rather, the toml is the only thing that's going to instantiate
