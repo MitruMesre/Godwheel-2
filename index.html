@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Godfield UI Scaffold (functional replica)</title>
+<style>
+  :root{
+    --teal: rgb(0,143,111);
+    --teal-dark: rgb(0,110,86);
+    --mint-text: rgb(238,255,238);
+    --row-bg: rgb(238,238,238);
+    --row-border: rgb(170,170,170);
+    --name-color: rgb(0,143,111);
+    --label-color: rgb(102,136,136);
+    --value-color: rgb(79,79,79);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:Meiryo,system-ui,sans-serif;background:#222;display:flex;justify-content:center;align-items:center;min-height:100vh;}
+
+  #stage{
+    position:relative;width:1080px;height:720px;overflow:hidden;
+    background: radial-gradient(ellipse at center, #bdf0e6 0%, #6fc9bd 60%, #3fa89c 100%);
+    box-shadow:0 0 40px rgba(0,0,0,.5);
+  }
+
+  /* ===== top bar ===== */
+  #topbar{position:absolute;left:0;top:0;width:1080px;height:44px;background:var(--teal);
+    color:var(--mint-text);font-weight:bold;}
+  #topbar .back{position:absolute;left:16px;top:0;height:44px;display:flex;align-items:center;
+    cursor:pointer;font-size:20px;}
+  #topbar .title{position:absolute;left:48px;top:0;height:44px;display:flex;align-items:center;
+    font-size:16px;}
+  #topbar .gfcounter{position:absolute;left:50%;top:8px;transform:translateX(-50%);
+    background:rgba(255,255,255,.15);border-radius:16px;padding:4px 14px;color:#ffb3b3;}
+  #topbar .bible{position:absolute;right:16px;top:0;height:44px;display:flex;align-items:center;
+    cursor:pointer;}
+
+  /* ===== bottom status bar ===== */
+  #bottombar{position:absolute;left:0;top:696px;width:1080px;height:24px;background:var(--teal-dark);
+    color:var(--mint-text);font-size:12px;display:flex;align-items:center;padding:0 10px;}
+  #bottombar .name{flex:1;}
+  #volume{display:flex;align-items:center;gap:6px;cursor:pointer;}
+  #volume .speaker{width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;
+    border-right:8px solid var(--mint-text);}
+  #volume.muted .speaker{border-right-color:rgba(238,255,238,.35);}
+  #volume .bars{display:flex;align-items:flex-end;gap:2px;height:12px;}
+  #volume .bars .bar{width:3px;background:rgba(238,255,238,.35);}
+  #volume .bars .bar.on{background:var(--mint-text);}
+
+  /* ===== self name field (left) =====
+     BUGFIX: previously top:36/height:40 (36-76) overlapped the 44px-tall top bar (0-44) by 8px.
+     Moved to sit flush below the top bar instead. */
+  #selfname{position:absolute;left:20px;top:50px;width:280px;height:40px;
+    background:rgba(255,255,255,.6);border-radius:20px;display:flex;align-items:center;padding:0 16px;}
+  #selfname input{border:none;background:transparent;font-weight:bold;color:var(--teal);font-size:18px;width:100%;outline:none;}
+
+  /* ===== player panel: CONFIRMED fixed box, 390x400, left:680 ===== */
+  #playerpanel{position:absolute;left:680px;top:36px;width:390px;height:400px;}
+  #playerlist{position:absolute;left:0;top:0;width:390px;height:360px;}
+  .prow{position:absolute;left:0;width:390px;height:40px;display:flex;align-items:center;}
+  /* BUGFIX: switching stats to a row layout made the pill's total content wider than its
+     340px box (row stats are wider than stacked ones), pushing the remove (X) button outside
+     the visible pill. Tightened gaps/widths so everything fits again instead of overflowing. */
+  .prow .pill{width:340px;height:40px;background:var(--row-bg);border:1px solid var(--row-border);
+    border-radius:20px;display:flex;align-items:center;padding:0 10px;gap:6px;position:relative;}
+  .prow .dot{width:18px;height:18px;border-radius:50%;border:2px solid #aaa;flex:none;}
+  .prow input.pname{border:none;background:transparent;font-weight:bold;color:var(--name-color);
+    font-size:18px;width:96px;outline:none;flex:none;}
+  .prow .stat{display:flex;flex-direction:row;align-items:baseline;gap:2px;flex:none;}
+  .prow .stat .lbl{font-size:10px;color:var(--label-color);font-weight:bold;flex:none;}
+  .prow .stat input{border:none;background:transparent;width:22px;text-align:left;font-size:14px;
+    color:var(--value-color);font-weight:bold;outline:none;}
+  .prow .rm{margin-left:auto;cursor:pointer;color:#b33;font-weight:bold;font-size:16px;padding:0 2px;flex:none;}
+
+  #miraclesbtn{position:absolute;left:90px;top:360px;width:250px;height:40px;background:#fff;
+    border:1px solid var(--row-border);border-radius:20px;display:flex;align-items:center;
+    justify-content:center;color:var(--teal);font-weight:bold;cursor:pointer;}
+
+  /* BUGFIX (again): #addplayer is a sibling of #playerpanel, not a child of it -- so its
+     "left" is relative to the whole #stage, not the panel. Using left:90 (meant as
+     "90px into the panel") put it at absolute x=90, nowhere near the panel at all,
+     overlapping Pray. Panel starts at left:680, Miracles starts 90px into that (=770),
+     so the absolute left here must be 680+90=770. */
+  #addplayer{position:absolute;left:770px;top:444px;width:300px;height:28px;
+    background:rgba(255,255,255,.35);border:1px dashed #fff;border-radius:14px;color:#fff;
+    font-weight:bold;text-align:center;line-height:26px;cursor:pointer;font-size:13px;}
+
+  /* Tooltip: shows details of the currently-hovered hand card. Sits below "+ Add player".
+     Redesigned to match reference: thumbnail image on the left (its size drives the box
+     height, plus a bit of padding) and name / stat / price on the right, matching the real
+     client's card-detail popup rather than the earlier generic stat block. */
+  #tooltip{position:absolute;left:770px;top:484px;width:300px;
+    background:rgb(224,245,204);border:2px solid rgb(150,205,120);border-radius:8px;
+    padding:8px;display:none;align-items:center;gap:10px;}
+  #tooltip.visible{display:flex;}
+  #tooltip .ttimg{width:64px;height:64px;flex:none;border-radius:4px;
+    background:linear-gradient(135deg,#ffe98a,#ffd23f);}
+  #tooltip .ttbody{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;}
+  #tooltip .ttname{font-weight:bold;color:rgb(70,60,10);font-size:15px;}
+  #tooltip .ttstat{font-weight:bold;color:rgb(70,60,10);font-size:15px;}
+  #tooltip .ttprice{flex:none;background:rgb(255,224,110);border-radius:50%;width:30px;height:30px;
+    display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;
+    color:rgb(120,90,10);}
+
+  /* ===== pray button ===== */
+  #pray{position:absolute;left:20px;top:432px;width:260px;height:40px;background:var(--teal);
+    border-radius:8px;color:var(--mint-text);font-weight:bold;font-size:18px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;}
+  #pray:active{background:var(--teal-dark);}
+
+  #handrule{position:absolute;left:8px;top:478px;width:650px;height:6px;
+    background:var(--teal);border-radius:3px;}
+
+  /* Discard button.
+     BUGFIX (again): icon should be a 1x4 grid (4 stacked horizontal cells, single column),
+     not 2x2 -- and the box was too squished vertically. Bottom edge stays flush against the
+     top of the hand grid (492), extended upward by increasing height instead of just
+     stretching the existing box. */
+  #discard{position:absolute;left:662px;top:402px;width:80px;height:90px;background:#e2e2e2;
+    border:1px solid #aaa;border-radius:4px;cursor:pointer;box-sizing:border-box;
+    padding:8px 14px;display:flex;flex-direction:column;gap:3px;}
+  #discard .cell{flex:1;background:#f4f4f4;border:2px solid #999;border-radius:2px;}
+
+  #cardserror{position:absolute;left:8px;top:658px;color:#a00;font-size:12px;font-weight:bold;
+    height:16px;}
+
+  /* ===== hand grid: 9 columns, 82px pitch, hard-capped at 18 (2 rows), no 3rd row ===== */
+  #hand{position:absolute;left:8px;top:492px;width:738px;height:212px;}
+  .card{position:absolute;width:80px;height:100px;background:#fff;border-radius:6px;
+    box-shadow:0 2px 4px rgba(0,0,0,.3);display:flex;flex-direction:column;overflow:hidden;cursor:default;}
+  .card .art{flex:1;background:linear-gradient(135deg,#ffe98a,#ffd23f);display:flex;
+    align-items:center;justify-content:center;font-size:11px;color:#7a5900;text-align:center;padding:2px;}
+  .card .lbl{height:22px;background:#d7f5ec;color:#0a5c48;font-size:12px;font-weight:bold;
+    text-align:center;line-height:22px;}
+  .card .rm{position:absolute;top:2px;right:2px;width:16px;height:16px;background:rgba(0,0,0,.55);
+    color:#fff;border-radius:50%;font-size:11px;line-height:16px;text-align:center;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="topbar">
+    <span class="back">&#8592;</span>
+    <span class="title">Training</span>
+    <span class="gfcounter" id="gflabel">G.F. 1/50</span>
+    <span class="bible">Bible</span>
+  </div>
+
+  <div id="selfname"><input id="selfnameinput" value="a"></div>
+
+  <div id="playerpanel">
+    <div id="playerlist"></div>
+    <div id="miraclesbtn">Performed Miracles</div>
+  </div>
+  <div id="addplayer" onclick="addPlayer()">+ Add player</div>
+  <div id="tooltip"></div>
+
+  <div id="pray" onclick="prayDrawCard()">Pray</div>
+  <div id="handrule"></div>
+  <div id="discard" title="discard pile">
+    <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+  </div>
+  <div id="cardserror"></div>
+
+  <div id="hand"></div>
+
+  <div id="bottombar">
+    <span class="name">a</span>
+    <span id="volume" onclick="toggleMute()"></span>
+  </div>
+</div>
+
+<script>
+// ===================== STATE =====================
+let players = [
+  {name:"a", hp:40, mp:10, gold:20},
+  {name:"Hilke", hp:40, mp:10, gold:20},
+  {name:"Qunc", hp:40, mp:10, gold:20},
+  {name:"Ciy", hp:40, mp:10, gold:20},
+];
+
+let cards = [
+  {label:"ATK10"},{label:"ATK14"},{label:"+ATK7"},{label:"DEF5"},
+  {label:""},{label:""},{label:""},{label:"75%ATK8"},
+];
+
+const HAND_CAP = 18; // CONFIRMED: 2 rows x 9 cols, no 3rd row -- overflow is a hard error.
+
+const DRAW_POOL = ["ATK6","ATK9","ATK12","DEF4","DEF8","+ATK5","Heal10","MP Potion","50%ATK16"];
+
+// ===================== PLAYER PANEL LAYOUT =====================
+// CONFIRMED: 390x400 panel, bottom 40px reserved for "Performed Miracles" (top:360 fixed),
+// remaining 360px block-centers N rows. pitch confirmed at n=2(133), n=4(80), n=9(40).
+// UNCONFIRMED for n=1,3,5,6,7,8 -- interpolated as: n<=2 -> 133, else min(80, 360/n).
+function computeRowPitch(n){
+  if(n<=2) return 133;
+  return Math.min(80, 360/n);
+}
+
+function renderPlayers(){
+  const list = document.getElementById('playerlist');
+  list.innerHTML = '';
+  const n = players.length;
+  const pitch = computeRowPitch(n);
+  const blockHeight = (n-1)*pitch + 40;
+  const topGap = (360 - blockHeight)/2;
+
+  players.forEach((p, i)=>{
+    const row = document.createElement('div');
+    row.className='prow';
+    row.style.top = (topGap + i*pitch)+'px';
+    row.innerHTML = `
+      <div class="pill">
+        <div class="dot"></div>
+        <input class="pname" value="${p.name}" onchange="updatePlayer(${i},'name',this.value)">
+        <div class="stat"><div class="lbl">HP</div><input value="${p.hp}" onchange="updatePlayer(${i},'hp',this.value)"></div>
+        <div class="stat"><div class="lbl">MP</div><input value="${p.mp}" onchange="updatePlayer(${i},'mp',this.value)"></div>
+        <div class="stat"><div class="lbl">$</div><input value="${p.gold}" onchange="updatePlayer(${i},'gold',this.value)"></div>
+        <div class="rm" onclick="removePlayer(${i})">&#10005;</div>
+      </div>`;
+    list.appendChild(row);
+  });
+}
+function updatePlayer(i,field,val){ players[i][field]=val; }
+function removePlayer(i){ players.splice(i,1); renderPlayers(); }
+function addPlayer(){
+  players.push({name:"New", hp:40, mp:10, gold:20});
+  renderPlayers();
+}
+
+// ===================== HAND GRID LAYOUT =====================
+const COLS = 9, COL_PITCH = 82, ROW_PITCH = 102;
+function renderHand(){
+  const hand = document.getElementById('hand');
+  hand.innerHTML='';
+  cards.forEach((c,i)=>{
+    const col = i % COLS, row = Math.floor(i/COLS);
+    const el = document.createElement('div');
+    el.className='card';
+    el.style.left = (col*COL_PITCH)+'px';
+    el.style.top = (row*ROW_PITCH)+'px';
+    el.innerHTML = `
+      <div class="rm" onclick="removeCard(${i})">&#10005;</div>
+      <div class="art">card ${i+1}</div>
+      <div class="lbl">${c.label||''}</div>`;
+    el.addEventListener('mouseenter', ()=>showTooltip(i));
+    // NOTE: no mouseleave -> hide. Per feedback, the tooltip should persist showing the last
+    // hovered card until a *different* card is hovered, not disappear when the mouse leaves.
+    hand.appendChild(el);
+  });
+}
+function removeCard(i){ cards.splice(i,1); renderHand(); clearError(); }
+
+function showError(msg){ document.getElementById('cardserror').textContent = msg; }
+function clearError(){ document.getElementById('cardserror').textContent = ''; }
+
+function addCard(label){
+  if(cards.length >= HAND_CAP){
+    showError('Hand is full (18/18) -- cannot draw another card.');
+    return false;
+  }
+  cards.push({label: label||''});
+  renderHand();
+  clearError();
+  return true;
+}
+function prayDrawCard(){
+  const label = DRAW_POOL[Math.floor(Math.random()*DRAW_POOL.length)];
+  addCard(label);
+}
+
+// ===================== TOOLTIP =====================
+// Placeholder card metadata (name + sell price) -- a real game would look this up from
+// each card's own data model rather than deriving it from the plain label string.
+const CARD_NAMES = {
+  "ATK10":"Wonder Sword", "ATK14":"Twin Blade", "+ATK7":"Sharpening Stone",
+  "DEF5":"Iron Buckler", "75%ATK8":"Cursed Dagger"
+};
+function parseCard(label, index){
+  const name = CARD_NAMES[label] || (label ? label + " Card" : "Unknown Card");
+  const price = label ? (1 + (label.length % 9)) : 1; // placeholder, not a real price rule
+  return {name, stat: label || "--", price};
+}
+function showTooltip(i){
+  const tt = document.getElementById('tooltip');
+  const c = cards[i];
+  const info = parseCard(c.label, i);
+  tt.innerHTML = `
+    <div class="ttimg"></div>
+    <div class="ttbody">
+      <div class="ttname">${info.name}</div>
+      <div class="ttstat">${info.stat}</div>
+    </div>
+    <div class="ttprice">$${info.price}</div>`;
+  tt.classList.add('visible');
+}
+
+// ===================== VOLUME SLIDER =====================
+let volumeLevel = 7;
+let volumeBeforeMute = 7;
+function renderVolume(){
+  const el = document.getElementById('volume');
+  el.classList.toggle('muted', volumeLevel===0);
+  const bars = Array.from({length:10}, (_,i)=>{
+    const h = 4 + i*1;
+    const on = i < volumeLevel;
+    return `<div class="bar ${on?'on':''}" onclick="event.stopPropagation(); setVolume(${i+1})" style="height:${h}px"></div>`;
+  }).join('');
+  el.innerHTML = `<span class="speaker"></span><span class="bars">${bars}</span>`;
+}
+function setVolume(n){ volumeLevel = n; if(n>0) volumeBeforeMute = n; renderVolume(); }
+// Clicking the speaker wedge itself (not a bar) toggles mute, matching the request that the
+// triangle be clickable rather than just decorative.
+function toggleMute(){
+  if(volumeLevel > 0){ volumeBeforeMute = volumeLevel; setVolume(0); }
+  else { setVolume(volumeBeforeMute || 7); }
+}
+
+renderPlayers();
+renderHand();
+renderVolume();
+</script>
+</body>
+</html>
