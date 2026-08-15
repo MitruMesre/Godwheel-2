@@ -28,30 +28,62 @@ get something actually playable before tackling the hard parts.
 - **Multiplayer:** none. Single process, one human vs one dumb bot.
   Networking is Phase 2+; `GameState` is written so it *could* later sit
   behind a network boundary without an API change, but nothing wired.
+- **There is no separate "non-combat effect" track for HP.** A heal is
+  just an attack with negative `combat.atk` -- you can attack yourself,
+  or "heal" an enemy, same as any other card. `CardEffect` only covers
+  MP/gold (`RestoreMana`/`RestoreMoney`) plus `RestoreHealth`, which
+  exists solely for hooks (Sun Amulet's on_death) since those fire
+  outside the normal play/target/defend pipeline entirely.
+- **`TargetKind` is a bot-only hint**, not an enforced target. Humans
+  freely choose self or enemy for any playable card at play time.
+- **Spells are called miracles.** A miracle is just a combat card with
+  `mana_cost > 0` and `persistent = true` -- nothing more special than
+  that.
+- **Hand is 18 fixed slots** (`Vec<Option<String>>`, col = slot%9, row =
+  slot/9), not a loosely-ordered list. Playing N cards (base + combos)
+  discards the non-persistent ones and draws N replacements into the
+  front-most empty slots; persistent (miracle) cards instead relocate to
+  the back-most empty slot instead of being discarded -- which is why
+  playing one miracle among several cards nets +1 occupied slot overall.
+- **Defense is free multi-select**, separate from the attack's
+  base+combo model: any number of DEF cards can be stacked (summed), no
+  combo restriction. Exclusive defenses (a "reflect" that can't combine
+  with anything else) aren't modeled in the MVP.
 - **Elemental Wheel:** cosmetic only. `wheel::attack_display_color`
   looks at the elements contributed by an attack's base + combo cards:
   exactly one distinct element -> that color; zero or 2+ distinct
   elements -> black. No blocking, no resistances, no combining logic.
-  `wheel::combine_elements_for_attack` / `filter_elements_for_defense`
-  (the old `todo!()`s) are gone -- not needed until the full Wheel comes
-  back.
-- **Cards:** still TOML + serde, still per-mod (`mods/<name>/cards.toml`
-  + `mods/<name>/locale/<lang>/cards.toml`), same as originally planned
-  -- just with the syntax bugs fixed. A card is either a **combat card**
-  (`combat.atk`/`combat.def`, resolved by summing atk vs def across the
-  attack/defense exchange) or an **effect card** (`effect`, a one-off
-  `CardEffect` resolved directly against a target) -- not both, until a
-  real card needs it.
-- **Cut for now:** `Afflict`/status effects (would need a status-effect
-  store on Player), `DeckCategory`/multiple named pools (`count` on
+- **Bot AI, deliberately dumb:**
+  - Own turn: pick a random playable weapon (non-combo, any signed atk),
+    attach *every* combo card currently in hand, target per that base
+    card's `TargetKind` hint (defaulting to the enemy).
+  - Defense: closest-subset-sum of its DEF cards to the incoming atk
+    (a bounded subset-sum DP, not literal brute force, but same result).
+- **Cut for now:** `DeckCategory`/multiple named pools (`count` on
   `CardDefinition` just says how many copies are in the single base
-  pool), `HandCard`/`AllEnemies`/`AllPlayers` targeting (only
-  `SelfTarget`/`Enemy` are used with one human + one bot).
-- **`src/bin/cli.rs`:** a stdin console harness -- `cargo run --bin cli`
-  from the project root. Lets you actually play the loop end to end
-  before any wasm/`index.html` wiring happens. `index.html` is still
-  the disconnected static mockup it always was; wiring it up via
-  wasm-bindgen is the next phase after the CLI loop feels right.
-- Not built/tested in this pass: no Rust toolchain was available to run
-  `cargo build`, so the code hasn't been compiler-checked. Run
-  `cargo build` first and expect to fix a few small things.
+  pool), Gambler's-Coin-style random-outcome cards.
+- **`src/bin/cli.rs`:** a stdin console harness -- `cargo run --bin cli`.
+  The base mod is baked into the binary via `include_str!`
+  (`CardRegistry::load_embedded_base`), so it doesn't depend on a
+  working directory; `CardRegistry::load_mod` (filesystem-based) is kept
+  for real third-party mods later.
+- **`index.html` is wired up.** `src/wasm.rs` exposes a small
+  JSON-string-in/JSON-string-out API (`WasmGame`) rather than a
+  fine-grained wasm-bindgen type surface, specifically because nothing
+  in this pass could be compiler-checked -- one serialization boundary
+  is a lot less risky than marshaling a dozen Vec<struct> types through
+  wasm-bindgen's own type system. `index.html`'s script now imports
+  `./pkg/godwheel_2.js` (from `wasm-pack build --dev --target web`) and
+  drives the existing visual scaffold from real game state; a small
+  action-bar element and card selection/eligibility outlines were added
+  for the play/target/defend interaction, but no existing CSS rule was
+  changed. The multi-player roster editor (add/remove player, editable
+  name/HP/MP/gold) was removed since the MVP is strictly 1v1 -- the
+  panel now always shows exactly "You" and "Bot", read-only.
+- Not built/tested in this pass: no Rust toolchain was available (and
+  wasm-pack/rustup's own domains aren't reachable from here either), so
+  none of this has been compiled -- not the native lib/CLI, not the wasm
+  build. Checked by hand instead: brace/paren/bracket balance with
+  string/comment content stripped (all clean) and `node --check` on the
+  extracted `<script type="module">` body (clean). Run `cargo check`
+  first and expect to fix a few small things before `wasm-pack build`.

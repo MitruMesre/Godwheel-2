@@ -1,6 +1,11 @@
 # Base mod: the vanilla card set, declared the same way any third-party
-# mod would declare cards (structure.md). MVP set only -- no status
-# effects (Afflict), no multi-deck-category pools.
+# mod would declare cards (structure.md). MVP set only.
+#
+# Every numeric card -- weapon, self-heal, or miracle/spell -- is a
+# `combat` card: atk is signed, negative = heal. There is no separate
+# "deal damage" or "restore health" card type. `target` below is only a
+# hint the bot AI uses to decide who to aim itself at; a human player
+# can target either side with any card.
 
 [iron_sword]
 target = "enemy"
@@ -39,22 +44,25 @@ count = 2
 [sharpening_stone.combat]
 atk = 2
 
-[fire_bolt]
+# A miracle: costs mana and is persistent (played, but not discarded --
+# it moves to a back hand slot instead of leaving your hand).
+[fireball]
 target = "enemy"
 mana_cost = 4
+persistent = true
 count = 2
 elements = ["fire"]
 
-[fire_bolt.combat]
-atk = 4
+[fireball.combat]
+atk = 6
 
+# A self-heal is just an attack with negative atk, aimed at yourself.
 [healing_potion]
 target = "self_target"
 count = 3
 
-[healing_potion.effect]
-type = "restore_health"
-amount = 10
+[healing_potion.combat]
+atk = -10
 
 [mana_potion]
 target = "self_target"
@@ -63,16 +71,6 @@ count = 2
 [mana_potion.effect]
 type = "restore_mana"
 amount = 8
-
-[gamblers_coin]
-target = "self_target"
-count = 2
-
-[gamblers_coin.effect]
-type = "heal_or_damage"
-heal_chance = 0.5
-heal_amount = 10
-damage_amount = 10
 
 [sun_amulet]
 playable = false

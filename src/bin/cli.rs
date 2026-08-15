@@ -1,9 +1,9 @@
 //! A stdin-driven console harness for the MVP loop: one human vs one
 //! dumb bot, no networking, no wasm. Run with `cargo run --bin cli`
-//! from the project root (it loads mods/base relative to the cwd).
+//! from anywhere -- the base mod is baked into the binary, no cwd
+//! dependency.
 
 use std::io::{self, Write};
-use std::path::Path;
 
 use godwheel_2::game::{AttackResult, GameState, Side};
 use godwheel_2::registry::CardRegistry;
@@ -17,8 +17,8 @@ fn read_line(prompt: &str) -> String {
     buf.trim().to_string()
 }
 
-/// Prints a numbered list of `(hand_index, description)` options and
-/// returns the chosen entry's hand_index. If `allow_none`, "0"/blank
+/// Prints a numbered list of `(hand_slot, description)` options and
+/// returns the chosen entry's hand_slot. If `allow_none`, "0"/blank
 /// returns None (pass / no combo / no defense).
 fn choose_from(options: &[(usize, String)], prompt: &str, allow_none: bool) -> Option<usize> {
     for (i, (_, desc)) in options.iter().enumerate() {
@@ -41,7 +41,7 @@ fn choose_from(options: &[(usize, String)], prompt: &str, allow_none: bool) -> O
     }
 }
 
-/// Same idea, but for comma-separated multi-select (combo cards).
+/// Same idea, but for comma-separated multi-select (combos / defense).
 fn choose_multi(options: &[(usize, String)], prompt: &str) -> Vec<usize> {
     if options.is_empty() {
         return Vec::new();
@@ -56,6 +56,17 @@ fn choose_multi(options: &[(usize, String)], prompt: &str) -> Vec<usize> {
         .filter(|&n| n >= 1 && n <= options.len())
         .map(|n| options[n - 1].0)
         .collect()
+}
+
+fn choose_target() -> Side {
+    println!("  1) Yourself   2) Bot");
+    loop {
+        match read_line("target> ").as_str() {
+            "1" => return Side::Human,
+            "2" => return Side::Bot,
+            _ => println!("  invalid choice, try again."),
+        }
+    }
 }
 
 fn print_status(game: &GameState) {
@@ -79,12 +90,17 @@ fn print_attack_result(res: &AttackResult) {
         Side::Human => "You",
         Side::Bot => "Bot",
     };
-    let defended = match &res.defended_with {
-        Some(name) => format!(" Defended with {name} (DEF {}).", res.def_total),
-        None => " No defense.".to_string(),
+    let target = match res.target {
+        Side::Human => "You",
+        Side::Bot => "Bot",
+    };
+    let defended = if res.defended_with.is_empty() {
+        " No defense.".to_string()
+    } else {
+        format!(" Defended with {} (DEF {}).", res.defended_with.join(", "), res.def_total)
     };
     println!(
-        "{attacker} attack: ATK {} ({color}).{defended} {} damage dealt.",
+        "{attacker} -> {target}: ATK {} ({color}).{defended} Net change: {} HP.",
         res.atk_total, res.damage
     );
     if let Some(name) = &res.revived_by {
@@ -107,18 +123,11 @@ fn print_winner(game: &GameState) -> bool {
 }
 
 fn main() {
-    let registry = match CardRegistry::load_mod(Path::new("mods/base"), "en") {
-        Ok(r) => r,
-        Err(e) => {
-            eprintln!("Failed to load base mod: {e}");
-            eprintln!("(run this from the project root: `cargo run --bin cli`)");
-            return;
-        }
-    };
+    let registry = CardRegistry::load_embedded_base();
     let mut game = GameState::new(registry);
 
     println!("=== Godwheel: MVP ===");
-    println!("You vs a bot. Reduce their HP to 0 to win.");
+    println!("You vs a bot. Reduce their HP to 0 to win. (Yes, you can attack yourself.)");
 
     loop {
         if print_winner(&game) {
@@ -133,25 +142,27 @@ fn main() {
 
         match chosen {
             None => println!("You pass."),
-            Some(hand_index) => {
-                let card_id = game.human.hand[hand_index].clone();
-                let is_attack = game.registry.get(&card_id).map_or(false, |d| d.is_attack());
-                if is_attack {
+            Some(slot) => {
+                let card_id = game.human.hand[slot].clone().unwrap();
+                let is_combat = game.registry.get(&card_id).map_or(false, |d| d.is_combat_card());
+                if is_combat {
                     let combos = game.combo_options(Side::Human);
-                    let combo_indices = if combos.is_empty() {
+                    let combo_slots = if combos.is_empty() {
                         Vec::new()
                     } else {
                         println!("Attach combo cards? (comma-separated numbers, or blank for none)");
                         choose_multi(&combos, "> ")
                     };
-                    let mut indices = vec![hand_index];
-                    indices.extend(combo_indices);
-                    match game.human_attack(&indices) {
+                    println!("Target:");
+                    let target = choose_target();
+                    let mut indices = vec![slot];
+                    indices.extend(combo_slots);
+                    match game.human_play(&indices, target) {
                         Ok(res) => print_attack_result(&res),
                         Err(e) => println!("Can't do that: {e}"),
                     }
                 } else {
-                    match game.human_effect(hand_index) {
+                    match game.human_effect(slot) {
                         Ok(msg) => println!("{msg}"),
                         Err(e) => println!("Can't do that: {e}"),
                     }
@@ -164,27 +175,34 @@ fn main() {
         }
 
         // ---- bot's turn ----
-        if let Some(heal_idx) = game.bot_plan_heal() {
-            match game.bot_use_effect(heal_idx) {
-                Ok(msg) => println!("\n{msg}"),
-                Err(e) => println!("\nBot fumbled: {e}"),
+        match game.bot_plan_turn() {
+            None => println!("\nBot passes."),
+            Some((slots, target, atk)) => {
+                let names: Vec<String> = slots
+                    .iter()
+                    .filter_map(|&s| game.bot.hand[s].clone())
+                    .map(|id| game.registry.name_of(&id).to_string())
+                    .collect();
+                let target_desc = if target == Side::Human { "you" } else { "itself" };
+                println!("\nBot plays {} (ATK {atk}) targeting {target_desc}!", names.join(" + "));
+
+                let defense_slots = if target == Side::Human {
+                    let defense = game.defensive_options(Side::Human);
+                    if defense.is_empty() {
+                        Vec::new()
+                    } else {
+                        println!("Defend with? (comma-separated numbers, or blank for none)");
+                        choose_multi(&defense, "> ")
+                    }
+                } else {
+                    Vec::new()
+                };
+
+                match game.bot_resolve_turn(&slots, target, &defense_slots) {
+                    Ok(res) => print_attack_result(&res),
+                    Err(e) => println!("Bot's move fizzled: {e}"),
+                }
             }
-        } else if let Some(atk_idx) = game.bot_plan_attack() {
-            let card_id = game.bot.hand[atk_idx].clone();
-            println!("\nBot attacks with {}!", game.registry.name_of(&card_id));
-            let defense = game.defensive_options(Side::Human);
-            let defense_index = if defense.is_empty() {
-                None
-            } else {
-                println!("Defend with?");
-                choose_from(&defense, "> ", true)
-            };
-            match game.resolve_bot_attack(atk_idx, defense_index) {
-                Ok(res) => print_attack_result(&res),
-                Err(e) => println!("Bot's attack fizzled: {e}"),
-            }
-        } else {
-            println!("\nBot passes.");
         }
     }
 }

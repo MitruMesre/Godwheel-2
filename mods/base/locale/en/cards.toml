@@ -18,21 +18,17 @@ description = "DEF 8"
 name = "Sharpening Stone"
 description = "Combo: +ATK 2"
 
-[fire_bolt]
-name = "Fire Bolt"
-description = "ATK 4, Fire"
+[fireball]
+name = "Fireball"
+description = "Miracle: ATK 6, Fire, costs 4 MP"
 
 [healing_potion]
 name = "Healing Potion"
-description = "HP +10"
+description = "HP +10 to target"
 
 [mana_potion]
 name = "Mana Potion"
 description = "MP +8"
-
-[gamblers_coin]
-name = "Gambler's Coin"
-description = "50% HP +10, 50% HP -10"
 
 [sun_amulet]
 name = "Sun Amulet"

@@ -1,24 +1,29 @@
+/// Fixed hand size: 18 slots (col = i % 9, row = i / 9), matching the
+/// hand grid in index.html. Slots are addressed directly rather than
+/// hand being a loosely-ordered Vec, because miracles need to land in
+/// specific back slots (see GameState::relocate_persistent_card).
+pub const HAND_SLOTS: usize = 18;
+
 pub struct Player {
     pub name: String,
-    pub hand: Vec<String>, // card IDs
+    /// `None` = empty slot.
+    pub hand: Vec<Option<String>>,
     pub health: u8,
     pub mana: u8,
     pub money: u8,
 }
 
-const MAX_HAND_SIZE: u8 = 18;
 const MAX_HEALTH: u8 = 99;
 const MAX_MANA: u8 = 99;
 const MAX_MONEY: u8 = 99;
 
 impl Player {
-    /// Starts with an empty hand -- drawing the opening hand needs the
-    /// shared deck, so that's done by GameState::new right after
-    /// construction, not here.
+    /// Hand starts fully empty -- the opening draw needs the shared
+    /// deck, so that's done by GameState::new right after construction.
     pub fn new(name: String) -> Player {
         Player {
             name,
-            hand: Vec::new(),
+            hand: vec![None; HAND_SLOTS],
             health: 40,
             mana: 20,
             money: 20,
@@ -27,10 +32,6 @@ impl Player {
 
     pub fn is_alive(&self) -> bool {
         self.health > 0
-    }
-
-    pub fn max_hand_size(&self) -> usize {
-        MAX_HAND_SIZE as usize
     }
 
     fn change_value(value: &mut u8, delta: i32, max: u8) {
@@ -51,15 +52,5 @@ impl Player {
 
     pub fn change_money(&mut self, delta: i32) {
         Self::change_value(&mut self.money, delta, MAX_MONEY);
-    }
-
-    /// Removes the first occurrence of `card_id` from hand, if present.
-    pub fn remove_from_hand(&mut self, card_id: &str) -> bool {
-        if let Some(pos) = self.hand.iter().position(|id| id == card_id) {
-            self.hand.remove(pos);
-            true
-        } else {
-            false
-        }
     }
 }
