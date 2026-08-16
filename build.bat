@@ -19,13 +19,15 @@ echo [1/2] wasm-pack build --dev --target web
 wasm-pack build --dev --target web
 if errorlevel 1 goto :fail
 
-echo.
-echo [2/2] npm run typecheck
-rem npm resolves to npm.cmd on Windows - a batch script. Without "call"
-rem here, npm.cmd finishing would terminate THIS script too instead of
-rem returning control to it (classic Windows batch-calls-batch gotcha).
-call npm run typecheck
-if errorlevel 1 goto :fail
+@REM no ts yet
+
+@REM echo.
+@REM echo [2/2] npm run typecheck
+@REM rem npm resolves to npm.cmd on Windows - a batch script. Without "call"
+@REM rem here, npm.cmd finishing would terminate THIS script too instead of
+@REM rem returning control to it (classic Windows batch-calls-batch gotcha).
+@REM call npm run typecheck
+@REM if errorlevel 1 goto :fail
 
 echo.
 echo ============================================
